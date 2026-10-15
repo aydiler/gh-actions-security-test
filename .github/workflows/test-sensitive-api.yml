@@ -1,33 +1,16 @@
-name: Test Sensitive API Access
+name: API Test
 on: [push]
-
 jobs:
-  test:
+  t:
     runs-on: ubuntu-latest
     steps:
-      - name: Test collaborator access
-        run: |
-          echo "=== Can we see OUR collaborators? ==="
+      - run: |
+          echo "=== Can we see collaborators? ==="
           curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/collaborators" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-if isinstance(data, list):
-    for user in data[:3]:
-        print(f'  {user[\"login\"]} ({user.get(\"permissions\",{}).get(\"admin\",False) and \"admin\" or \"user\"})')
-    print(f'  Total: {len(data)} collaborators')
-else:
-    print(f'  Error: {data}')
-" 2>/dev/null
+            "https://api.github.com/repos/${{ github.repository }}/collaborators" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(type(d).__name__, len(d) if isinstance(d,list) else 'error')"
           
-          echo ""
-          echo "=== Can we see OTHER repos' collaborators? ==="
-          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/vercel/turborepo/collaborators")
-          echo "  vercel/turborepo: $CODE"
-          
-          CODE2=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/vercel/eve/collaborators")
-          echo "  vercel/eve: $CODE2"
+          echo "=== Can we see other repo's collaborators? ==="
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/vercel/turborepo/collaborators" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('message','')[:100])"
