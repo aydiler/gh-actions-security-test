@@ -1,0 +1,25 @@
+name: PR Target Test
+# WARNING: This workflow uses pull_request_target, which runs with the 
+# base repository's privileges (not the fork's). This is a known vector.
+on: pull_request_target
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      
+      - name: "Test: Can we access parent secrets from PR?"
+        run: |
+          echo "=== PR Target Test ==="
+          echo "Event: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Head ref: ${{ github.event.pull_request.head.ref }}"
+          echo "Base ref: ${{ github.event.pull_request.base.ref }}"
+          
+          # Test if GITHUB_TOKEN can access our own secrets
+          echo "=== Testing secret access ==="
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/secrets" | head -3
