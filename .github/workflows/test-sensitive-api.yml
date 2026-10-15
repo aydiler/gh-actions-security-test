@@ -5,34 +5,29 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Test secret scanning access
+      - name: Test collaborator access
         run: |
-          echo "=== Testing sensitive API access ==="
+          echo "=== Can we see OUR collaborators? ==="
+          curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/collaborators" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+if isinstance(data, list):
+    for user in data[:3]:
+        print(f'  {user[\"login\"]} ({user.get(\"permissions\",{}).get(\"admin\",False) and \"admin\" or \"user\"})')
+    print(f'  Total: {len(data)} collaborators')
+else:
+    print(f'  Error: {data}')
+" 2>/dev/null
           
-          # Can we access secret scanning alerts?
-          echo "Secret scanning:"
-          CODE1=$(curl -s -o /dev/null -w "%{http_code}" \
+          echo ""
+          echo "=== Can we see OTHER repos' collaborators? ==="
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/secret-scanning/alerts")
-          echo "  alerts: $CODE1"
+            "https://api.github.com/repos/vercel/turborepo/collaborators")
+          echo "  vercel/turborepo: $CODE"
           
-          # Can we access dependabot alerts?
-          echo "Dependabot:"
           CODE2=$(curl -s -o /dev/null -w "%{http_code}" \
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/dependabot/alerts")
-          echo "  alerts: $CODE2"
-          
-          # Can we access code scanning?
-          echo "Code scanning:"
-          CODE3=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/code-scanning/alerts")
-          echo "  alerts: $CODE3"
-          
-          # Can we list repository collaborators?
-          echo "Collaborators:"
-          CODE4=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-            "https://api.github.com/repos/${{ github.repository }}/collaborators")
-          echo "  list: $CODE4"
+            "https://api.github.com/repos/vercel/eve/collaborators")
+          echo "  vercel/eve: $CODE2"
